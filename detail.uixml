@@ -1,0 +1,116 @@
+<!-- ExMobi UIXML(XHTML)文件 -->
+<html>
+	<head>
+		<meta content="charset=utf-8"/>
+		<title show="false"/>
+		<link rel="stylesheet" type="text/css" href="res:css/global.css" />
+		<script src="res:script/exmobijs/app.js"/>
+		<script src="res:script/exmobijs/base.js"/>
+        <script src="res:script/exmobijs/utility.js"/>
+        <script src="res:script/exmobijs/date.js"/>
+<script>
+	<![CDATA[
+		var progressbarObj = new ProgressBar();
+		var userName = window.getStringSession("userFullCode");
+		
+		//alert(o.deviceName);
+		function init() {
+			var param=window.getParameter("j");
+		var j=EncryptionUtil.base64Decode(param);
+		//alert(j);
+		var o=eval("("+j+")");
+		window.o=o;
+			$("main").html("");
+		getDetail(o.deviceName,o.deviceCode,o.status);
+	}
+	/*获取设备详情*/
+	function getDetail(deviceName,deviceCode,status) {
+		progressbarObj.setMessage("获取中...");
+		progressbarObj.show();
+		data = "";
+		$a.go("http://10.41.244.216:8600/WebAppInterface/xxcx?deviceCode="+deviceCode+"&userName="+userName, "get", data, getDetail_success, getDetail_fail, '{"Content-Type":"application/x-www-form-urlencoded; charset=utf-8","Accept-Language":"zh-cn"}', false);
+	}
+	function getDetail_success(data) {
+		progressbarObj.cancel();
+		var innerHtml = '';
+		var content = eval("(" + data.responseText + ")");
+		
+				if(content.rows.length>0){
+				//写到input输入框中去
+				$("deviceName").rcaption=o.deviceName;
+				$("deviceCode").rcaption=o.deviceCode;
+				$("status").rcaption=o.status;
+				$("workshop").rcaption=content.rows[0].EMS_DEVICE_LOCATION;
+				$("costEnergy").rcaption=content.rows[0].EMS_DEVICE_ENERGY;
+				$("rate").rcaption=content.rows[0].EMS_DEVICE_PERFORMRATE;
+				for( i = 0; i < content.rows.length; i++){
+				var item = content.rows[i].OINFO_NAME;
+				//alert(item);
+				var itemcontent = content.rows[i].RTDATA;
+				innerHtml += "<listitem  type='oneline' icon=''  caption='" + item + "' rcaption='"+itemcontent+"'style='width:100%' />"
+				//innerHtml += "<font   style='width:30%' value='"+item+"'/>";
+				//innerHtml+="<input readonly='true' type='text' value='"+itemcontent+"' style='width:70%' hideborder='true' "/>"
+				document.getElementById("main").innerHTML = innerHtml;//寫到項目中
+				//$(i).html(item);
+				}
+		}else{
+			alert("无数据");
+		}
+	}
+	function getDetail_fail(data) {
+		progressbarObj.cancel();
+		//progressbarObj.cancel();
+		alert("服务器异常，请求数据失败。");
+	}
+	function returnMainMenu() {
+				//var username = document.getElementById("username").value;
+				window.open("res:page/chaxun.uixml?userName=" + userName, false);
+			}
+	]]>
+		</script>
+	</head>
+	<header>
+		<!--<titlebar id="titlebarid" title="活动详情" iconhref="script:close"  res:page/shebei_list.uixml style="rcolor: black" ricon="none" clickricon="none" rcaption="结束" riconhref="end()"/>-->
+		<titlebar title="详细信息" iconhref="returnMainMenu()" hidericon="true"></titlebar>
+	</header>
+	<body onload="init()">
+	   <meta content="charset=UTF-8"/>
+	   <input type="hidden" id="username" name="username"  />
+	   <div id="maindiv">
+	   <!--<div id="isActive1" style="display: inline;width:30%;">是否结束：</div>-->
+       <!--<br/>-->
+       <!--<div id="movingVacuum1" style="display: inline;width:30%;">真空检测：</div>
+          <input disabled="true"type="text" style="width:70%" hideborder="false"  id="movingVacuum" ></input>
+       <br/>-->
+       <listitem  type='oneline' icon=''  caption="设备名称" rcaption="" id="deviceName"style='width:100%' />
+       	  <!--<div id="dn" style="display: inline;width:30%;">设备名称：</div>-->
+          <!--<input readonly="true" type="text" style="width:70%" hideborder="true"  id="deviceName" prompt="精细等离子切割机"></input>-->
+       <br/>
+       <listitem  type='oneline' icon=''  caption="设备编号" rcaption="" id="deviceCode"style='width:100%' />
+       	  <!--<div id="dC" style="display: inline;width:30%;">设备编号：</div>
+          <input readonly="true" type="text" style="width:70%" hideborder="true"  id="deviceCode" prompt="dlzqgj"></input>-->
+       <br/>
+       <listitem  type='oneline' icon=''  caption="运行状态" rcaption="" id="status"style='width:100%' />
+          <!--<div id="st" style="display: inline;width:30%;">运行状态：</div>
+          <input readonly="true" type="text" style="width:70%"  hideborder="true"  id="status" prompt="工作"></input>-->
+       <br/>
+       <listitem  type='oneline' icon=''  caption="车间" rcaption="" id="workshop"style='width:100%' />
+		  <!--<div id="ws" style="display: inline;width:30%;">车       间：</div>
+          <input readonly="true" type="text" style="width:70%"  hideborder="true"  id="workshop" prompt="台一"></input>-->
+       <br/>
+       <listitem  type='oneline' icon=''  caption="能耗" rcaption="" id="costEnergy"style='width:100%' />
+          <!--<div id="ce" style="display: inline;width:30%;">能       耗：</div>
+          <input readonly="true" type="text" style="width:70%"  hideborder="true"  id="costEnergy" prompt="7832J"></input>-->
+       <br/>
+       <listitem  type='oneline' icon=''  caption="效率" rcaption="" id="rate"style='width:100%' />
+          <!--<div id="ra" style="display: inline;width:30%;">效       率：</div>
+          <input readonly="true" type="text" style="width:70%"  hideborder="true"  id="rate" prompt="75%"></input>-->
+       <br/>
+       </div>
+       <div id="main">
+	   
+       </div>
+	</body>
+	<footer>
+    </footer>
+</html>

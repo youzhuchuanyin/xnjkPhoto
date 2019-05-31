@@ -1,0 +1,405 @@
+<!-- ExMobi UIXML(XHTML)文件 -->
+<html>
+	<head>
+		<meta content="charset=utf-8"/>
+		<title show="false"/>
+		<link rel="stylesheet" type="text/css" href="res:css/global.css" />
+		<script src="res:script/exmobijs/app.js"/>
+		<script src="res:script/exmobijs/base.js"/>
+        <script src="res:script/exmobijs/utility.js"/>
+        <script src="res:script/exmobijs/date.js"/>
+<script>
+	<![CDATA[
+	//主函数
+		var userName = window.getStringSession("userFullCode");
+		function init() {
+			var param=window.getParameter("j");
+			var j=EncryptionUtil.base64Decode(param);
+			var o=eval("("+j+")");//把字符串又转为对象
+			window.o=o;
+			addActivity(o.deviceCode,userName);
+			$("xm").html("");
+			$("userFullCode").val(userName);
+			doGetNetIp();
+	    }
+	    function selectPhoto(type) {
+			var photoupload = document.getElementById("photouploadid");
+			photoupload.openCameraUploadEx(type);
+			}
+	   	function timeStamp2String(){  
+		    var datetime = new Date();  
+		    var year = datetime.getFullYear();  
+		    var month = datetime.getMonth() + 1 < 10 ? "0" + (datetime.getMonth() + 1) : datetime.getMonth() + 1;  
+		    var date = datetime.getDate() < 10 ? "0" + datetime.getDate() : datetime.getDate();  
+		    var hour = datetime.getHours()< 10 ? "0" + datetime.getHours() : datetime.getHours();  
+		    var minute = datetime.getMinutes()< 10 ? "0" + datetime.getMinutes() : datetime.getMinutes();  
+		    var second = datetime.getSeconds()< 10 ? "0" + datetime.getSeconds() : datetime.getSeconds();  
+		    return year+month+date+hour+minute+second; 
+    	}  
+	    //向服务器发送请求(录入之查询-》)
+	    function addActivity(deviceCode,userName) {
+			data = "";
+			$a.go("http://10.41.244.216:8600/WebAppInterface/lrcx?deviceCode="+deviceCode+"&userName="+userName, "get", data, addActivity_success, failFunction, '{"Content-Type":"application/x-www-form-urlencoded; charset=utf-8","Accept-Language":"zh-cn"}', false);
+		}
+	    //得到服务器返回内容（录入之查询《-）
+	    function addActivity_success(data) {
+	    	var hide="";
+	    	var innerHtml="";
+	    	var itemall="";
+	    	var content = eval("(" + data.responseText + ")");
+	    	//alert(content);
+					if(content.rows.length>0){
+					//写到input输入框中去
+					$("deviceName").rcaption=o.deviceName;
+					$("deviceCode").rcaption=o.deviceCode;
+					if(content.rows[0].EMS_ZHOUQI=="每日一次"){
+						var EMS_ZHOUQI="日";
+						var zhouqi="d";
+					}else if(content.rows[0].EMS_ZHOUQI=="每周一次"){
+						var EMS_ZHOUQI="周";
+						var zhouqi="w";
+					}else{
+						var EMS_ZHOUQI="月";
+						var zhouqi="m";
+					}
+					$("inspectionCy").rcaption=content.rows[0].EMS_ZHOUQI;
+					$("documentNo").rcaption=content.rows[0].EMS_DEVICE_NUM+zhouqi+timeStamp2String();
+					$("standardCode").val(content.rows[0].STANDARD_NUM);
+					for( i = 0; i < content.rows.length; i++){
+						var item = content.rows[i].EMS_ITEM;
+						//window.item=item;
+						//var itemall="{EMS_ITEM:}"+window.item;
+						itemall+="{"+item+"}";
+						//alert(itemall);
+						window.itemall=itemall;
+						var itemcontent = content.rows[i].EMS_CONTENT;
+						hide+="<input type='hidden' id='total' value='" + content.total + "'></input>";
+						//hide+="<input type='hidden' id='"+i+"' value='"+item+"' style='width:25%'></input>";
+						//innerHtml+= "<font  value='"+(i+1)+"."+itemcontent+"' id='"+i+"' style='width:50%;text-aline:left;font_size:normal'></font>"
+						innerHtml += "<listitem  type='oneline' icon=''  caption='" + itemcontent + "' style='width:50%' />"
+						innerHtml+="<input type='radio'value='正常'caption='正常' checked='true' name='"+i+"' style='width:25%'></input>";
+						innerHtml+="<input type='radio'value='异常'caption='异常'  name='"+i+"' style='width:25%'></input>";
+						innerHtml+="<hr/>";
+						document.getElementById("hide").innerHTML = hide;//寫到項目中
+						document.getElementById("xm").innerHTML = innerHtml;//寫到項目中
+					}
+					}else{
+								alert("无数据");
+							}
+		}
+		function failFunction(data) {
+			alert("服务器异常，请求数据失败。");
+		}
+		function doGetNetIp() {
+			/*ip地址*/
+			var net = NetworkUtil.getMobileConnectType();
+			if(net==3){
+				var ip = NetworkUtil.getNetIp();
+				$("position").val(ip);
+			}else{
+				dingwei();
+			}
+		}
+	//start
+	//百度定位
+			var baiduutil = new BaiduLocation();
+			baiduutil.disableCache(true);
+			baiduutil.setOpenGps(true);
+			//gps 定位 for ios
+			var position;
+			var progressbarObj;
+			var LocationObj;
+			var jingdu;
+			var weidu;
+			var issign;
+			function dingwei() {
+				progressbarObj = new ProgressBar();
+				progressbarObj.setMessage("定位中...");
+				progressbarObj.show();
+				var os = Util.getOs();
+				if (os.indexOf('ios') >= 0) {
+					position = new Gps();
+					position.onCallback = callback_gps;
+					position.setTimeout(1000 * 60);
+					position.startPosition();
+				} else {
+					baiduutil.setCoorType("bd0911");
+					baiduutil.setTimeout(1000 * 60);
+					baiduutil.onCallback = callback_baidu;
+					baiduutil.startPosition();
+				}
+			}
+			function callback_gps() {
+				progressbarObj.cancel();
+				if (!position.isSuccess()) {/*返回定位是否成功*/
+					//定位失败
+					//alert("定位失败!请重试...");/*gps*/
+					position.stopPosition();
+					/*停止定位*/
+				} else {
+					var latitude = position.latitude;
+					/*获得纬度*/
+					var longitude = position.longitude;
+					/*获得经度*/
+					//var locationtime = position.locationtime;
+					///*定位成功时间*/
+					//var accuracy = position.accuracy;
+					///*获取定位精度*/
+					//var altitude = position.altitude;
+					///*获取定位高度*/
+					//var speed = position.speed;
+					///*获取移动速度*/
+					document.getElementById("jingweidu").value = longitude+","+latitude;
+					//document.getElementById("latitude").value = latitude;
+					LocationObj = new Location();
+					LocationObj.onCallback = callback_weizhi;
+					LocationObj.setTimeout(8000);
+					LocationObj.startGetLocationInfo(latitude, longitude, "wgs84ll");
+				}
+			}
+function callback_weizhi() {
+				if (!LocationObj.isSuccess()) {/*获取位置信息是否成功*/
+					var code = LocationObj.getMessageCode();
+					/*定位失败的信息代码*/
+					alert('获取位置信息失败,失败信息：' + code);
+					/*objName*/
+				} else {
+					var addStr = [];
+					addStr.push(LocationObj.province);
+					addStr.push(LocationObj.city);
+					addStr.push(LocationObj.district);
+					addStr.push(LocationObj.street);
+					addStr.push(LocationObj.streetNumber);
+					document.getElementById("position").rcaption = addStr.join("");
+					//var tempVar=addStr.join("");
+					///*******************判断是否允许打卡开始  modify 20151021 开始************************/
+					 //jingdu=position.longitude;
+					 //weidu=position.latitude;
+					 //var tip = document.getElementById("tip");
+						////if(tempVar.indexOf("江夏区山湖路") < 0){
+						 //if(!((jingdu>114.27&&jingdu<114.30)&&(weidu>30.38&&weidu<30.41))){						 	
+							//tip.innerHTML = "<div style='text-valign:middle;text-align: center;color: red;'>当前位置不在允许签到的范围内</div>";	
+						//}else{
+							//issign=true;
+							//tip.innerHTML = "<div style='text-valign:middle;text-align: center;color: blue;'>当前位置在允许签到的范围内</div>";
+						//}
+					/*******************判断是否允许打卡开始  modify 20151021 结束************************/
+				}
+			}
+			function callback_baidu() {
+				progressbarObj.cancel();
+				if (!baiduutil.isSuccess()) {
+					alert("定位失败!请重试...");
+				} else {
+					if (baiduutil.address == "") {
+						alert("定位已成功，但无法获取位置信息");
+					} else {
+						//document.getElementById("longitude").value = baiduutil.longitude;
+						document.getElementById("jingweidu").value = baiduutil.longitude+","+baiduutil.latitude;
+						//document.getElementById("latitude").value = baiduutil.latitude;
+						document.getElementById("position").rcaption = baiduutil.address;
+						//var tempVar=baiduutil.address;
+						//var tip = document.getElementById("tip");
+						//jingdu=baiduutil.longitude;
+					    //weidu=baiduutil.latitude;
+						////if(tempVar.indexOf("江夏区山湖路") < 0){
+						//if(!((jingdu>114.27&&jingdu<114.30)&&(weidu>30.38&&weidu<30.41))){					 	
+							//tip.innerHTML = "<div style='text-valign:middle;text-align: center;color: red;'>当前位置不在允许签到的范围内</div>";	
+						//}else{
+							//issign=true;
+							//tip.innerHTML = "<div style='text-valign:middle;text-align: center;color: blue;'>当前位置在允许签到的范围内</div>";
+						//}
+					//						
+					}
+				}
+			}
+	//end
+	//录入之录入
+	function aaa() {
+			var progressbarObj=new ProgressBar();
+			progressbarObj.setMessage("提交中...");
+			progressbarObj.show();
+			window.progressbarObj=progressbarObj;
+			var position=$("position").val();
+			var jingweidu=$("jingweidu").val();
+			var total=$("total").val();
+			var dakuohao="";
+			var EMS_ITEM="";
+			//var EMS_ITEM=$("").val();
+			for(i=0;i<total;i++){
+				var flaglinshi=document.getElementsByName(i);
+				 //EMS_ITEM=document.getElementById(i).value;
+				 //alert(EMS_ITEM);
+				for(var m=0;m<flaglinshi.length;m++){
+					if(flaglinshi[m].checked){
+					var itemFlag=flaglinshi[m].value;
+					//window.itemFlag[i]=itemFlag;
+				}
+			}
+						 //dakuohao+="{itemFlag:"+encodeURI(itemFlag)+"}"   9.17下面9.18
+						 dakuohao+="{"+encodeURI(itemFlag)+"}"
+					 //dakuohao+="{EMS_ITEM:"+EMS_ITEM+",itemFlag:"+itemFlag+"}"
+			}
+			var handlelinshi=document.getElementsByName("group");
+			for(var j=0;j<handlelinshi.length;j++){
+				if(handlelinshi[j].checked){
+					var handle=handlelinshi[j].value;
+				}
+			}
+			//alert(handle);
+			var standardCode=$("standardCode").val();
+			var userFullCode=$("userFullCode").val();
+			var deviceName=$("deviceName").rcaption;
+			var deviceCode=$("deviceCode").rcaption;
+			if($("inspectionCy").rcaption=="日"){
+				var inspectionCy="每日一次";
+			}else if($("inspectionCy").rcaption=="周"){
+				var inspectionCy="每周一次";
+			}else{
+				var inspectionCy="每月一次";
+			}
+			var exceDesc=$("exceDesc").val();
+			var documentNo=$("documentNo").rcaption;
+			var photouploadObj = document.getElementById("photouploadid");
+		 	var fileEncode=doImageToBase64();
+		 	var photoPath=photouploadObj.getFilePath(0);
+		 	//photoPathAll=photoPath.slice(43,photoPath.length);
+		 	var photoPathAll="";
+		 	//photoPathAll=photoPathAll.get_uuid();
+		 	photoPathAll=photoPath.slice(photoPath.length-30,photoPath.length);
+		 	window.photoPathAll=photoPathAll;	
+			var recordPhoto="\\\\10.40.121.69\\D$\\xnjkPhoto\\"+photoPathAll;
+			var data="";
+		var url = "http://10.41.244.216:8600/WebAppInterface/lrlr?position=" +jingweidu+encodeURI(position)
+                  +"&standardCode="+standardCode
+                  +"&userName="+userFullCode
+                  +"&deviceName="+encodeURI(deviceName)
+				  +"&deviceCode="+deviceCode
+				  +"&inspectionCy="+encodeURI(inspectionCy)
+				  +"&exceDesc="+exceDesc
+				  +"&handle="+encodeURI(handle)
+				  +"&documentNo="+documentNo
+				  +"&recordPhoto="+recordPhoto
+				  //+"&rows="
+				  //+window.itemall+dakuohao   9.17 以下9.18
+				  +"&EMS_ITEM="+window.itemall
+				  +"&itemFlag="+dakuohao
+		$a.go(url, "get", data, input_success, input_fail, '{"Content-Type":"application/x-www-form-urlencoded; charset=utf-8","Accept-Language":"zh-cn"}', false);
+	}
+	function get_uuid(){
+	    var s = [];
+	    var hexDigits = "0123456789abcdef";
+	    for (var i = 0; i < 36; i++) {
+	        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+	    }
+	    s[14] = "4";  
+	    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1); 
+	    s[8] = s[13] = s[18] = s[23] = "-";
+	
+	    var uuid = s.join("");
+	    return uuid;
+	}
+
+	function input_success(data){
+		progressbarObj.cancel();
+		var content = eval("(" + data.responseText + ")");
+		//alert(data);
+				if (content.msg == 0) {
+						alert("录入成功",callback);
+				} else {
+					    alert("录入失败");
+				}
+			}
+	function input_fail(){
+		progressbarObj.cancel();
+		alert("请求失败");
+	}
+	function callback(){
+		window.open("res:page/chaxun.uixml?userName=" + userName, false);
+	}
+ function doImageToBase64(){
+    var photouploadObj = document.getElementById("photouploadid");
+    //var path = photouploadObj.rootpath;
+    var path = photouploadObj.getFilePath(0);
+    var jsonData = {};
+    jsonData.imagePath = path+'';
+    var content = EncryptionUtil.imageToBase64(jsonData);
+    content = encodeURIComponent(content);
+    //alert(content.length);
+    return content;
+ }
+	function bbb(){
+		var photouploadObj = document.getElementById("photouploadid");
+		//var url = "http://10.40.16.72:8080/xnjkphoto/uploadPhoto";
+		var url = "http://10.40.121.69:8080/xnjkphoto/uploadPhoto";
+	 	var fileEncode=doImageToBase64();
+	 	//var photoPath=photouploadObj.getFilePath(0);
+	 	//photoPath0=photoPath.slice(44,64);
+	 	//photoPath1=photoPath.slice(66,photoPath.length);
+		data = 
+			"recordPhoto=" +fileEncode
+			+"&photoPathAll="+photoPathAll;
+		$a.go(url, "post", data, bbb_success, bbb_fail, '{"Accept-Language":"zh-cn"}', false);
+	}
+	function bbb_success(){
+		//alert("图片录入成功");
+	}
+	function bbb_fail(){
+		alert("图片录入失败");
+	}
+	function returnMainMenu() {
+				//var username = document.getElementById("username").value;
+				window.open("res:page/chaxun.uixml?userName=" + userName, false);
+	}
+	]]>
+		</script>
+	</head>
+	<header>
+		<!--<titlebar id="titlebarid" title="录入产品加工信息"  hidericon="true"iconhref="res:page/home.uixml"/>-->
+		<titlebar id="titlebarid" title="巡检点检记录"  hidericon="true"iconhref="returnMainMenu()" />
+	</header>
+	<body onload="init()">
+		<div id="hide"></div>
+		<input type="hidden" id="jingweidu"></input>
+		<input type="hidden" id="standardCode"></input>
+		<input type="hidden" id="userFullCode"></input>
+		<listitem  type='oneline' icon=''  caption="单据编号" rcaption="" id="documentNo"style='width:100%' />
+		  <!--<div id="djbh" style="display: inline;width:30%;">单据编号：</div>
+          <input readonly="true" type="text" style="width:70%" hideborder="true"  id="documentNo" prompt=""></input>
+       	  <br/>-->
+       	<listitem  type='oneline' icon=''  caption="设备名称" rcaption="" id="deviceName"style='width:100%' />
+       	<!--<div id="dN" style="display: inline;width:30%">设备名称：</div>
+          <input readonly="true" type="text" style="width:70%" hideborder="true"  id="deviceName" prompt="精细等离子切割机"></input>
+       <br/>-->
+       	<listitem  type='oneline' icon=''  caption="位置" rcaption="" id="position"style='width:100%' />
+       		<!--<div id="dC" style="display: inline;width:30%;">位置：</div>
+          <input readonly="true" type="text" style="width:70%" hideborder="true"  id="position" prompt="dlzqgj"></input>
+           <br/>-->
+        <listitem  type='oneline' icon=''  caption="设备编号" rcaption="" id="deviceCode"style='width:74%' />
+       <!--<font id="ic" style="font-size:20;float:left">周期：</font>
+        <input type="text"readonly="true" style="width:15%;text-align: center" hideborder="true"  id="inspectionCy"prompt=" 日" ></input>-->
+        <listitem  type='oneline' icon=''  caption="周期" rcaption="" id="inspectionCy"style='width:26%' />
+       <!--<font id="posi" style="font-size:20;float:left">设备编号：</font>
+       <input readonly="true" type="text" style="width:52%" hideborder="true"  id="deviceCode" prompt="10.40.121.60"></input>
+       <br/>-->
+       <div style="" class="" id="xm" href="">
+		</div>
+		 <font style="width:50%;text-align: left ;font-size:normal">是否处理</font>
+			<input type="radio" value="是" caption="是" name="group" style="width:25%"/>
+			<input type="radio" value="否" caption="否" name="group" checked="true" style="width:25%"/>
+		<hr/>
+	<p>异常情况描述：</p>
+	<textarea rows="5" id="exceDesc" style=""prompt="有任何异常该项都不能为空，如果发生了上面没有的异常要记下来"></textarea>
+	<hr/>
+	
+	<photoupload   style="height:30%;" id="photouploadid"  name="photouploadName" nums="1" isfront="false" compress="50" />
+	
+				<div id="time"  style="border-size:1;height:8%;text-valign:middle;text-align: center;color: red;" href="selectPhoto(1)">
+					点击此区域拍照记录异常
+				</div>
+	</body>
+	<footer>
+          <input type="button" value="提        交" onclick="aaa(),bbb()" style="width:60%;align:center;"></input>
+    </footer>
+	
+</html>
